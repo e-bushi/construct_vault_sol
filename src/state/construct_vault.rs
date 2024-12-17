@@ -12,11 +12,11 @@ pub struct Vault {
 }
 
 impl Vault {
-    pub const SIZE: usize = 8 + 32 + 8 + 8 + 8 + 1;
+    pub const SIZE: usize = 32 + 8 + 8 + 8 + 1 + 1;
 
     pub const LOCK_DURATION: i64 = 60 * 60 * 24 * 30;
 
-    pub const SEED_PREFIX: &str = "kuza_vault";
+    pub const SEED_PREFIX: &'static str = "kuza_vault";
 
     pub fn new(owner: Pubkey, amount_locked: u64) -> Self {
         Self {
