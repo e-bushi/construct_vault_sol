@@ -4,7 +4,14 @@ mod tests {
     use borsh::BorshDeserialize;
     use solana_program_test::*;
     use solana_sdk::{
-        hash::Hash, instruction::{AccountMeta, Instruction}, msg, pubkey::Pubkey, signature::{Keypair, Signer}, system_program, sysvar, transaction::Transaction
+        hash::Hash, 
+        instruction::{AccountMeta, Instruction}, 
+        msg, 
+        pubkey::Pubkey, 
+        signature::{Keypair, Signer}, 
+        system_program, 
+        sysvar, 
+        transaction::Transaction
     };
     use spl_token::state::Mint;
     use spl_associated_token_account::get_associated_token_address;
@@ -165,5 +172,29 @@ mod tests {
             Err(e) => panic!("Failed to get vault ATA account: {}", e),
         };
         assert_eq!(vault_ata_account.owner, spl_token::id());
+    }
+
+    #[tokio::test]
+    async fn test_deposit() {
+        // Create program test environment
+        let program_id = Pubkey::new_unique();
+    }
+
+    #[tokio::test]
+    async fn test_withdraw() {
+        // Create program test environment
+        let program_id = Pubkey::new_unique();
+    }
+
+    #[tokio::test]
+    async fn test_release() {
+        // Create program test environment
+        let program_id = Pubkey::new_unique();
+    }
+
+    #[tokio::test]
+    async fn test_extend() {
+        // Create program test environment
+        let program_id = Pubkey::new_unique();
     }
 }
