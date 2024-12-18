@@ -1,7 +1,79 @@
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey,
+use {
+    crate::state::Vault, borsh::{BorshDeserialize, BorshSerialize}, solana_program::{
+        account_info::{next_account_info, AccountInfo}, clock::Clock, entrypoint::ProgramResult, msg, program::invoke, program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar
+    }, spl_token::instruction as token_instruction, std::fmt::{Debug, Display}
 };
 
-pub fn deposit(_program_id: &Pubkey, _caccounts: &[AccountInfo]) -> ProgramResult {
+pub fn deposit(
+    program_id: &Pubkey, 
+    accounts: &[AccountInfo], 
+    amount: u64
+) -> ProgramResult {
+    msg!("Depositing funds into the vault");
+
+    let account_info_iter = &mut accounts.iter();
+
+    let initializer = next_account_info(account_info_iter)?;
+    let vault_account = next_account_info(account_info_iter)?;
+    let vault_ata = next_account_info(account_info_iter)?;
+    let user_token_account = next_account_info(account_info_iter)?;
+    let token_program = next_account_info(account_info_iter)?;
+
+    if !initializer.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    // Derive PDA for vault
+    let (pda, _) = Pubkey::find_program_address(
+        &[
+            Vault::SEED_PREFIX.as_bytes(),
+            initializer.key.as_ref(),
+        ],
+        program_id
+    );
+
+    if pda != *vault_account.key {
+        return Err(ProgramError::InvalidSeeds);
+    }
+
+
+    if *vault_ata.owner != spl_token::id() {
+        msg!("Vault ATA is not owned by the vault");
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let mut data = &vault_account.data.borrow_mut()[..];
+    let mut vault = Vault::deserialize(&mut data)?;
+
+    msg!("Depositing {} tokens", amount);
+
+    let transfer_instruction = token_instruction::transfer(
+        token_program.key,
+        user_token_account.key,
+        vault_ata.key,
+        initializer.key,
+        &[initializer.key],
+        amount,
+    )?;
+
+    invoke(
+        &transfer_instruction,
+        &[
+            user_token_account.clone(),
+            vault_ata.clone(),
+            initializer.clone(),
+            token_program.clone(),
+        ],
+    )?;
+
+    vault.amount_locked += amount;
+    vault.deposit_timestamp = Clock::get()?.unix_timestamp as u64;
+    vault.is_locked = true;
+    vault.lock_duration = Vault::LOCK_DURATION;
+
+    // Serialize and save the updated vault data
+    vault.serialize(&mut *vault_account.data.borrow_mut())?;
+
+    msg!("Successfully deposited {} tokens and updated the vault", amount);
     Ok(())
 }

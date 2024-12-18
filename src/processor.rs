@@ -18,7 +18,7 @@ pub fn process_instruction(
 
     match instruction {
         VaultInstruction::Initialize => initialize(program_id, accounts),
-        VaultInstruction::Deposit => deposit(program_id, accounts),
+        VaultInstruction::Deposit { amount } => deposit(program_id, accounts, amount),
         VaultInstruction::Withdraw => withdraw(program_id, accounts),
         VaultInstruction::Release => release(program_id, accounts),
         VaultInstruction::Extend => extend(program_id, accounts),
@@ -28,7 +28,7 @@ pub fn process_instruction(
 #[derive(BorshSerialize, BorshDeserialize, Debug, PartialEq)]
 pub enum VaultInstruction {
     Initialize,
-    Deposit,
+    Deposit { amount: u64 },
     Withdraw,
     Release,
     Extend,

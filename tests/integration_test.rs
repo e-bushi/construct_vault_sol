@@ -15,6 +15,7 @@ mod tests {
     };
     use spl_token::state::Mint;
     use spl_associated_token_account::get_associated_token_address;
+    use spl_associated_token_account::instruction::create_associated_token_account;
     use construct_vault_sol::state::construct_vault::Vault;
     use solana_program::program_pack::Pack;
 
@@ -55,7 +56,7 @@ mod tests {
             &mint_keypair.pubkey(),
             &payer.pubkey(), // mint authority
             None,            // freeze authority
-            0,              // decimals
+            9,              // decimals
         ).unwrap()],
         Some(&payer.pubkey()),
         &[payer],
@@ -178,23 +179,153 @@ mod tests {
     async fn test_deposit() {
         // Create program test environment
         let program_id = Pubkey::new_unique();
+        
+        let program_test = ProgramTest::new(
+            "construct_vault_sol",
+            program_id,
+            processor!(processor::process_instruction),
+        );
+
+        // Start the test environment
+        let (mut banks_client, payer, recent_blockhash) = program_test.start().await;
+
+        // Create mint and initialize it
+        let mint_keypair = create_mint(&mut banks_client, &payer, recent_blockhash).await;
+        
+        // Derive vault PDA
+        let (vault_pda, _bump) = Pubkey::find_program_address(
+            &[
+                Vault::SEED_PREFIX.as_bytes(),
+                payer.pubkey().as_ref(),
+            ],
+            &program_id,
+        );
+
+        // Get vault's associated token account
+        let vault_ata = get_associated_token_address(
+            &vault_pda,
+            &mint_keypair.pubkey(),
+        );
+
+        // Create user's token account
+        let user_ata = get_associated_token_address(
+            &payer.pubkey(),
+            &mint_keypair.pubkey(),
+        );
+
+        // Create user's token account
+        let create_user_ata_ix = create_associated_token_account(
+            &payer.pubkey(),
+            &payer.pubkey(),
+            &mint_keypair.pubkey(),
+            &spl_token::id(),
+        );
+
+        let transaction = Transaction::new_signed_with_payer(
+            &[create_user_ata_ix],
+            Some(&payer.pubkey()),
+            &[&payer],
+            recent_blockhash,
+        );
+
+        banks_client.process_transaction(transaction).await.unwrap();
+
+        // Mint some tokens to user
+        let mint_amount = 10000;
+        let mint_to_ix = spl_token::instruction::mint_to(
+            &spl_token::id(),
+            &mint_keypair.pubkey(),
+            &user_ata,
+            &payer.pubkey(),
+            &[&payer.pubkey()],
+            mint_amount,
+        ).unwrap();
+
+        let transaction = Transaction::new_signed_with_payer(
+            &[mint_to_ix],
+            Some(&payer.pubkey()),
+            &[&payer],
+            recent_blockhash,
+        );
+
+        banks_client.process_transaction(transaction).await.unwrap();
+
+        // Initialize vault first
+        let init_instruction = Instruction {
+            program_id,
+            accounts: vec![
+                AccountMeta::new(payer.pubkey(), true),
+                AccountMeta::new(vault_pda, false),
+                AccountMeta::new(vault_ata, false),
+                AccountMeta::new_readonly(mint_keypair.pubkey(), false),
+                AccountMeta::new_readonly(system_program::id(), false),
+                AccountMeta::new_readonly(spl_token::id(), false),
+                AccountMeta::new_readonly(spl_associated_token_account::id(), false),
+                AccountMeta::new_readonly(sysvar::rent::id(), false),
+            ],
+            data: vec![0], // Initialize instruction
+        };
+
+        let transaction = Transaction::new_signed_with_payer(
+            &[init_instruction],
+            Some(&payer.pubkey()),
+            &[&payer],
+            recent_blockhash,
+        );
+
+        banks_client.process_transaction(transaction).await.unwrap();
+
+        // Create deposit instruction
+        let deposit_amount: u64 = 50043;
+        let mut instruction_data: Vec<u8> = vec![1];
+        instruction_data.extend_from_slice(&deposit_amount.to_le_bytes());
+
+        let deposit_instruction = Instruction {
+            program_id,
+            accounts: vec![
+                AccountMeta::new(payer.pubkey(), true),
+                AccountMeta::new(vault_pda, false),
+                AccountMeta::new(vault_ata, false),
+                AccountMeta::new(user_ata, false),
+                AccountMeta::new_readonly(spl_token::id(), false),
+            ],
+            data: instruction_data,
+        };
+
+        let transaction = Transaction::new_signed_with_payer(
+            &[deposit_instruction],
+            Some(&payer.pubkey()),
+            &[&payer],
+            recent_blockhash,
+        );
+
+        banks_client.process_transaction(transaction).await.unwrap();
+
+        // Verify the deposit was successful
+        let vault_ata_account = banks_client.get_account(vault_ata).await.unwrap().unwrap();
+        let vault_ata_data = spl_token::state::Account::unpack(&vault_ata_account.data).unwrap();
+        assert_eq!(vault_ata_data.amount, deposit_amount as u64);
+
+        let user_ata_account = banks_client.get_account(user_ata).await.unwrap().unwrap();
+        let user_ata_data = spl_token::state::Account::unpack(&user_ata_account.data).unwrap();
+        assert_eq!(user_ata_data.amount, mint_amount - deposit_amount as u64);
     }
 
     #[tokio::test]
     async fn test_withdraw() {
         // Create program test environment
-        let program_id = Pubkey::new_unique();
+        // let program_id = Pubkey::new_unique();
     }
 
     #[tokio::test]
     async fn test_release() {
         // Create program test environment
-        let program_id = Pubkey::new_unique();
+        // let program_id = Pubkey::new_unique();
     }
 
     #[tokio::test]
     async fn test_extend() {
         // Create program test environment
-        let program_id = Pubkey::new_unique();
+        // let program_id = Pubkey::new_unique();
     }
 }
