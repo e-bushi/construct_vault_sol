@@ -1,6 +1,6 @@
 use solana_program::pubkey::Pubkey;
 use borsh::{BorshDeserialize, BorshSerialize};
-use std::fmt::Display;
+    
 #[derive(BorshSerialize, BorshDeserialize, Debug, PartialEq)]
 pub struct Vault {
     pub owner: Pubkey,

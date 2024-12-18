@@ -231,7 +231,7 @@ mod tests {
         banks_client.process_transaction(transaction).await.unwrap();
 
         // Mint some tokens to user
-        let mint_amount = 10000;
+        let mint_amount = 100000000;
         let mint_to_ix = spl_token::instruction::mint_to(
             &spl_token::id(),
             &mint_keypair.pubkey(),

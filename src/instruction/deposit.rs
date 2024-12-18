@@ -1,7 +1,14 @@
 use {
     crate::state::Vault, borsh::{BorshDeserialize, BorshSerialize}, solana_program::{
-        account_info::{next_account_info, AccountInfo}, clock::Clock, entrypoint::ProgramResult, msg, program::invoke, program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar
-    }, spl_token::instruction as token_instruction, std::fmt::{Debug, Display}
+        account_info::{next_account_info, AccountInfo},
+        clock::Clock,
+        entrypoint::ProgramResult,
+        msg,
+        program::invoke,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+        sysvar::Sysvar,
+    }, spl_token::instruction as token_instruction
 };
 
 pub fn deposit(
@@ -42,8 +49,8 @@ pub fn deposit(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let mut data = &vault_account.data.borrow_mut()[..];
-    let mut vault = Vault::deserialize(&mut data)?;
+    let mut vault_data = vault_account.data.borrow_mut();
+    let mut vault = Vault::deserialize(&mut &vault_data[..])?;
 
     msg!("Depositing {} tokens", amount);
 
@@ -71,8 +78,8 @@ pub fn deposit(
     vault.is_locked = true;
     vault.lock_duration = Vault::LOCK_DURATION;
 
-    // Serialize and save the updated vault data
-    vault.serialize(&mut *vault_account.data.borrow_mut())?;
+    // Serialize back into the same borrowed data
+    vault.serialize(&mut &mut vault_data[..])?;
 
     msg!("Successfully deposited {} tokens and updated the vault", amount);
     Ok(())
