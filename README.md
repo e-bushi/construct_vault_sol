@@ -49,13 +49,12 @@ The project uses the following crates:
 git clone https://github.com/e-bushi/construct_vault_sol
 cd construct_vault_sol
 cargo build
+```
 
 ## Building
 
 ```bash
-
 cargo build-bpf
-
 ```
 
 ## Testing
@@ -74,7 +73,7 @@ After building, you can find your program ID in the target/deploy directory. You
 
 ### Client Integration
 
-Example of creating a vault transaction using the Solana web3.js library:
+Example of creating a vault transaction using the solana-program-test library:
 
 ```rust
 
@@ -129,10 +128,6 @@ println!("Lock expires at: {}", vault_data.lock_expiry);
 - Validates lock duration compliance
 
 - Ensures proper account ownership
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
