@@ -49,3 +49,108 @@ The project uses the following crates:
 git clone https://github.com/e-bushi/construct_vault_sol
 cd construct_vault_sol
 cargo build
+
+## Building
+
+```bash
+
+cargo build-bpf
+
+```
+
+## Testing
+
+```bash
+
+cargo test-bpf
+
+```
+
+## Usage
+
+### Program ID
+
+After building, you can find your program ID in the target/deploy directory. You'll need this ID to interact with the program.
+
+### Client Integration
+
+Example of creating a vault transaction using the Solana web3.js library:
+
+```rust
+
+let create_vault_ix = Instruction::new_with_borsh(
+
+    program_id,
+
+    &VaultInstruction::Initialize { amount },
+
+    vec![
+
+        AccountMeta::new(payer.pubkey(), true),
+
+        AccountMeta::new(vault_pda, false),
+
+        AccountMeta::new(token_account, false),
+
+        AccountMeta::new_readonly(spl_token::ID, false),
+
+        AccountMeta::new_readonly(system_program::ID, false),
+
+    ],
+
+);
+
+```
+
+### Checking Vault Status
+
+You can fetch vault data using the Solana RPC API:
+
+```rust
+
+let account_data = connection
+
+    .get_account_data(&vault_pda)
+
+    .await?;
+
+let vault_data = VaultState::try_from_slice(&account_data)?;
+
+println!("Lock expires at: {}", vault_data.lock_expiry);
+
+```
+
+## Security Considerations
+
+- The contract uses PDAs for secure token custody
+
+- Implements checks for token ownership and amounts
+
+- Validates lock duration compliance
+
+- Ensures proper account ownership
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+1. Fork the repository
+
+2. Create your feature branch
+
+3. Commit your changes
+
+4. Push to the branch
+
+5. Create a new Pull Request
+
+## Disclaimer
+
+This smart contract is provided as-is. Users should conduct their own security audit before deploying in production.
+
+## Contact
+
+For questions and support, please open an issue in the GitHub repository.
+
