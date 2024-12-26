@@ -48,7 +48,6 @@ The project uses the following crates:
 ```bash
 git clone https://github.com/e-bushi/construct_vault_sol
 cd construct_vault_sol
-cargo build
 ```
 
 ## Building
