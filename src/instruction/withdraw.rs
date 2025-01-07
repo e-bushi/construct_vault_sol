@@ -11,12 +11,9 @@ use {
         pubkey::Pubkey,
         sysvar::Sysvar,
         system_instruction
-    }, 
-    spl_token::instruction as token_instruction,
+    },
     crate::release
 };
-
-const WITHDRAW_FEE: u64 = 1000000000 / 2; // 0.5 SOL (50%)
 
 pub fn withdraw(
     program_id: &Pubkey, 
@@ -29,9 +26,10 @@ pub fn withdraw(
     let user = next_account_info(account_info_iter)?;
     let vault_account = next_account_info(account_info_iter)?;
     let vault_ata = next_account_info(account_info_iter)?;
-    let user_token_account = next_account_info(account_info_iter)?;
-    let system_program = next_account_info(account_info_iter)?;
-    let token_program = next_account_info(account_info_iter)?;
+    let _ = next_account_info(account_info_iter)?;
+    let fee_receiver = next_account_info(account_info_iter)?;
+    let _ = next_account_info(account_info_iter)?;
+    let _ = next_account_info(account_info_iter)?;
 
     if !user.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
@@ -54,16 +52,35 @@ pub fn withdraw(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let mut vault_data = vault_account.data.borrow_mut();
+    let vault_data = vault_account.data.borrow_mut();
     let mut vault = Vault::deserialize(&mut &vault_data[..])?;
-    
-    if !vault.is_locked {
+
+    let time_elasped_in_days: u64 = (Clock::get()?.unix_timestamp as u64  - vault.deposit_timestamp) / 86400;
+    let duration_in_days: u64 = vault.lock_duration / 86400;
+
+    if time_elasped_in_days < duration_in_days {
+        msg!("Vault is still within lock period");
+        let percentage_of_lock_period = (time_elasped_in_days / duration_in_days) * 100;
+        let early_withdraw_fee = 1 / percentage_of_lock_period;
+        let total_amount_in_lamports = 1_000_000_000 * early_withdraw_fee;
+
+         // Transfer SOL fee
+         msg!("Transferring SOL fee to the fee receiver");
+        let sol_transfer_instruction = system_instruction::transfer(
+            user.key,
+            fee_receiver.key,
+            total_amount_in_lamports
+        );
+
+        msg!("Invoking SOL transfer instruction");
+        invoke(&sol_transfer_instruction, accounts)?;
+
+        msg!("Attempting to release tokens from the vault");
+        release(program_id, accounts)?;
+        return Ok(());
+    } else {
         msg!("Vault is not locked");
-        
         release(program_id, accounts)?;
         return Ok(());
     }
-
-
-    Ok(())
 }

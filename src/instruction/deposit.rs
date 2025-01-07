@@ -93,6 +93,7 @@ pub fn deposit(
             vault_ata.clone(),
             initializer.clone(),
             token_program.clone(),
+            system_program.clone(),
         ],
     )?;
 
@@ -105,5 +106,7 @@ pub fn deposit(
     vault.serialize(&mut &mut vault_data[..])?;
 
     msg!("Successfully deposited {} tokens and updated the vault", amount);
+
+    msg!("Vault data: {:?}", vault);
     Ok(())
 }
