@@ -10,7 +10,7 @@ use {
         program_error::ProgramError,
         pubkey::Pubkey,
         sysvar::Sysvar,
-        system_instruction
+        system_program,
     }, spl_token::instruction as token_instruction
 };
 
@@ -27,12 +27,25 @@ pub fn deposit(
     let vault_account = next_account_info(account_info_iter)?;
     let vault_ata = next_account_info(account_info_iter)?;
     let user_token_account = next_account_info(account_info_iter)?;
-    let fee_receiver = next_account_info(account_info_iter)?;
+    let _ = next_account_info(account_info_iter)?;
+    let _ = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
     let token_program = next_account_info(account_info_iter)?;
+    let _ = next_account_info(account_info_iter)?;
+    let _ = next_account_info(account_info_iter)?;
 
+    msg!("Successfully retrieved all accounts");
+    
     if !initializer.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    if *token_program.key != spl_token::id() {
+        return Err(ProgramError::IncorrectProgramId);
+    }
+    
+    if *system_program.key != system_program::id() {
+        return Err(ProgramError::IncorrectProgramId);
     }
 
     // Derive PDA for vault
@@ -57,23 +70,6 @@ pub fn deposit(
     let mut vault_data = vault_account.data.borrow_mut();
     let mut vault = Vault::deserialize(&mut &vault_data[..])?;
 
-
-
-    // Transfer SOL fee
-    let sol_transfer_instruction = system_instruction::transfer(
-        initializer.key,
-        fee_receiver.key,
-        1000000000 / 100 // 0.01 SOL (1%)
-    );
-
-    invoke(
-        &sol_transfer_instruction,
-        &[
-            initializer.clone(),
-            fee_receiver.clone(),
-            system_program.clone(),
-        ],
-    )?;
 
     msg!("Depositing {} tokens", amount);
 

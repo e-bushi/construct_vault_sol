@@ -17,19 +17,15 @@ pub fn process_instruction(
         .map_err(|_| ProgramError::InvalidInstructionData)?;
 
     match instruction {
-        VaultInstruction::Initialize => initialize(program_id, accounts),
+        VaultInstruction::Initialize { amount } => initialize(program_id, accounts, amount),
         VaultInstruction::Deposit { amount } => deposit(program_id, accounts, amount),
         VaultInstruction::Withdraw => withdraw(program_id, accounts),
-        VaultInstruction::Release => release(program_id, accounts),
-        VaultInstruction::Extend => extend(program_id, accounts),
     }
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Debug, PartialEq)]
 pub enum VaultInstruction {
-    Initialize,
+    Initialize { amount: u64 },
     Deposit { amount: u64 },
     Withdraw,
-    Release,
-    Extend,
 }

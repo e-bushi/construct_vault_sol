@@ -12,7 +12,7 @@ pub struct Vault {
 }
 
 impl Vault {
-    pub const SIZE: usize = 32 + 8 + 8 + 8 + 1 + 1;
+    pub const LEN: usize = 32 + 8 + 8 + 8 + 1 + 1;
 
     pub const LOCK_DURATION: u64 = 60 * 60 * 24 * 30;
 
