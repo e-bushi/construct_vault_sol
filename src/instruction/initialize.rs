@@ -156,7 +156,7 @@ pub fn initialize(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) ->
         vault_ata.key,
         initializer.key,
         &[initializer.key],
-        amount,
+        amount * 1000000000,
     )?;
 
     invoke(
